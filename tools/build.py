@@ -95,6 +95,15 @@ def main():
     # salta al modulo, che prova i comandi APEDSK99
     patch(rom, 0x653C, b"\x02\x03\x60\x8F",
           b"\x04\x60" + RAMDST.to_bytes(2, "big"), "Illegal Command")
+    # banner all'avvio nell'ex ramo di errore CHARA1 (>63AE->6437)
+    ban_f = os.path.join(a.out, "banner.bin")
+    run([sys.executable, xas, "-b", "-R", os.path.join(ROOT, "src", "banner.a99"),
+         "-L", os.path.join(a.out, "banner.lst"), "-o", ban_f], a.xdt99)
+    ban = open(ban_f, "rb").read()
+    if len(ban) > 0x6438 - 0x63AE or ban[2:4] != b"\x06\xA0":
+        sys.exit("errore: banner.bin inatteso (%d byte)" % len(ban))
+    patch(rom, 0x63AE, b"\x02\x01\x7E\xB4\x02\x02\x00\xD0", ban, "ramo CHARA1")
+    patch(rom, 0x6470, b"\x04\x60\x71\xA6", b"\x04\x60\x63\xB0", "B AUTO-BAT")
     # FSTLOW iniziale (copiato a >2028): il loader E/A non sovrascrive il modulo
     patch(rom, 0x779A, b"\x2B\x76", fstlow.to_bytes(2, "big"), "FSTLOW")
 

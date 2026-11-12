@@ -1,0 +1,34 @@
+********************************************************************
+* Banner all'avvio di 4A DOS.
+*
+* Usa l'area >63AE->6437 della ROM, che conteneva il ramo
+* "INSERT CHARA1 IN DRIVE 1": con il font in GROM (routine di Tursi a
+* >7FB0) quel ramo non viene piu' eseguito.
+*
+* All'avvio 4A DOS fa B @>71A6 (esecuzione di DSK1.AUTO-BAT) da >6470;
+* la patch lo cambia in B @BANNER.
+********************************************************************
+VER    EQU  >6A52              comando VER: versione e copyright
+PRINT  EQU  >655A              stampa stringa con lunghezza in R3
+AUTOBT EQU  >71A6              esecuzione di DSK1.AUTO-BAT
+CONT   EQU  >644E              seguito normale dopo il caricamento font
+
+       AORG >63AE
+
+* ex ramo di errore CHARA1: prosegue come se il font fosse caricato
+       JMP  CONT
+
+BANNER BL   @VER
+       LI   R3,MSG
+       BL   @PRINT
+       LI   R3,BLANK
+       BL   @PRINT
+       B    @AUTOBT
+
+MSG    BYTE 19
+       TEXT '+ APEDSK99 commands'
+BLANK  BYTE 1
+       TEXT ' '
+       EVEN
+BANEND
+       END

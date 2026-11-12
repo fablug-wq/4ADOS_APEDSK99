@@ -57,11 +57,21 @@ Byte modificati:
 | File | Indirizzo | Prima | Dopo |
 |---|---|---|---|
 | 4ADOSC.BIN | `>653C` | `0203 608F` (LI R3,>608F) | `0460 2B76` (B @>2B76) |
+| 4ADOSC.BIN | `>63AE` | ramo "INSERT CHARA1" (non più usato) | banner all'avvio |
+| 4ADOSC.BIN | `>6470` | `0460 71A6` (B @AUTO-BAT) | `0460 63B0` (B @banner) |
 | 4ADOSC.BIN | `>779A` | `2B76` | `2D90` (FSTLOW) |
 | 4ADOSG.BIN | `>6016` | `40 98` (BR >6098) | `44 E0` (BR >64E0) |
 | 4ADOSG.BIN | `>64B4` | `06` "4A DOS" | `0E` "4ADOS APEDSK99" (nome nel menu) |
 | 4ADOSG.BIN | `>64E0` | vuoto | routine GPL di copia |
 | 4ADOSG.BIN | `>6500` | vuoto | modulo ADSK |
+
+## Banner
+
+All'avvio 4A DOS ora stampa la versione (come `VER`) e la riga
+`+ APEDSK99 commands`, poi esegue `DSK1.AUTO-BAT` se c'è. Il codice
+(`src/banner.a99`) sta nell'area della ROM che conteneva la richiesta
+"INSERT CHARA1 IN DRIVE 1": con il font in GROM quel ramo non viene più
+eseguito, e al suo posto ora c'è un salto al seguito normale.
 
 ## Costruzione
 
