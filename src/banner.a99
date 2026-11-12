@@ -21,6 +21,10 @@ CONT   EQU  >644E              seguito normale dopo il caricamento font
 BANNER BL   @VER
        LI   R3,MSG
        BL   @PRINT
+* PRINT va a capo prima di scrivere, e il prompt si scrive sulla riga
+* corrente: servono due righe vuote per vederne una.
+       LI   R3,BLANK
+       BL   @PRINT
        LI   R3,BLANK
        BL   @PRINT
        B    @AUTOBT
