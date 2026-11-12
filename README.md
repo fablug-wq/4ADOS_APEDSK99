@@ -69,7 +69,10 @@ Byte modificati:
 ## Avvio e uscita
 
 Nella versione di JediMatt42 4A DOS partiva da una routine di power-up
-a ogni reset, quindi `Q` lo faceva solo ripartire. Ora la lista power-up
+a ogni reset, quindi `Q` lo faceva solo ripartire. Questo comportamento
+resta nella variante `--mode auto` (`cart/autostart/`), dove a `>6016` il
+`BR >6098` diventa `BR >64E0` (copia del modulo, poi LAUNCH). Nella variante
+predefinita (`cart/menu/`) la lista power-up
 è vuota e 4A DOS parte dalla sua voce nel menu del TI
 ("4ADOS APEDSK99"):
 
@@ -87,8 +90,13 @@ eseguito, e al suo posto ora c'è un salto al seguito normale.
 
 ## File pronti
 
-La cartella `cart/` contiene `4ADOSC.BIN` e `4ADOSG.BIN` già modificati:
-basta copiarli sulla SD del FinalGROM99.
+La cartella `cart/` contiene due versioni già pronte da copiare sulla SD del
+FinalGROM99. In entrambe ci sono i comandi APEDSK99 e il banner:
+
+- `cart/menu/`: 4A DOS parte dalla voce "4ADOS APEDSK99" nel menu del TI, e
+  `Q` torna alla schermata del TI.
+- `cart/autostart/`: 4A DOS parte da solo a ogni reset, come nella versione
+  di JediMatt42, e `Q` lo fa ripartire.
 
 ## Costruzione
 
@@ -96,7 +104,8 @@ I file originali di 4A DOS non sono nel repository. Servono come input:
 
 ```sh
 git clone https://github.com/endlos99/xdt99
-python3 tools/build.py --rom 4ADOSC.BIN --grom 4ADOSG.BIN --xdt99 ./xdt99
+python3 tools/build.py --rom 4ADOSC.BIN --grom 4ADOSG.BIN --xdt99 ./xdt99            # menu
+python3 tools/build.py --rom 4ADOSC.BIN --grom 4ADOSG.BIN --xdt99 ./xdt99 --mode auto  # autostart
 python3 tests/test_adsk.py build/adsk.bin
 ```
 

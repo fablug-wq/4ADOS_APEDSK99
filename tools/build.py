@@ -51,6 +51,10 @@ def main():
     ap.add_argument("--grom", required=True, help="4ADOSG.BIN originale")
     ap.add_argument("--xdt99", default=os.environ.get("XDT99", "xdt99"))
     ap.add_argument("--out", default=os.path.join(ROOT, "build"))
+    ap.add_argument("--mode", choices=("menu", "auto"), default="menu",
+                    help="menu: 4A DOS parte dal menu del TI e Q torna alla "
+                         "schermata del TI (predefinito); auto: parte a ogni "
+                         "reset come nella versione di JediMatt42")
     ap.add_argument("--force", action="store_true",
                     help="ignora il controllo SHA-256 dei file originali")
     a = ap.parse_args()
@@ -78,7 +82,8 @@ def main():
 
     run([sys.executable, xga, "-D", "ADSKSZ=%d" % size,
          "-L", os.path.join(a.out, "gromhook.lst"), "-o", hook_f,
-         os.path.join(ROOT, "src", "gromhook.gpl")], a.xdt99)
+         os.path.join(ROOT, "src", "gromhook.gpl" if a.mode == "menu"
+                      else "gromhook_auto.gpl")], a.xdt99)
     hook = open(hook_f, "rb").read()
 
     if BLOB_GROM + size > GROM_END:
@@ -108,11 +113,17 @@ def main():
     patch(rom, 0x779A, b"\x2B\x76", fstlow.to_bytes(2, "big"), "FSTLOW")
 
     # --- GROM ---
-    # niente avvio automatico: lista power-up vuota nell'header
-    patch(grom, 0x6004, b"\x60\x90", b"\x00\x00", "lista power-up")
-    # la voce del menu (>64B0) punta all'avvio a >64E0 invece che a EXIT
-    patch(grom, 0x64B2, b"\x64\xD0", HOOK_GROM.to_bytes(2, "big"),
-          "indirizzo voce menu")
+    if a.mode == "menu":
+        # niente avvio automatico: lista power-up vuota nell'header
+        patch(grom, 0x6004, b"\x60\x90", b"\x00\x00", "lista power-up")
+        # la voce del menu (>64B0) punta all'avvio a >64E0 invece che a EXIT
+        patch(grom, 0x64B2, b"\x64\xD0", HOOK_GROM.to_bytes(2, "big"),
+              "indirizzo voce menu")
+    else:
+        # avvio automatico: BR >6098 -> BR >64E0 (copia, poi salta a >6098)
+        patch(grom, 0x6016, b"\x40\x98",
+              bytes([0x40 | ((HOOK_GROM >> 8) & 0x1F), HOOK_GROM & 0xFF]),
+              "BR LAUNCH")
     # nome nel menu del FinalGROM99 (voce programma a >64B0, nome a >64B4)
     name = b"4ADOS APEDSK99"
     if any(grom[0x64BB - BASE:0x64D0 - BASE]):
@@ -123,6 +134,7 @@ def main():
 
     open(os.path.join(a.out, "4ADOSC.BIN"), "wb").write(rom)
     open(os.path.join(a.out, "4ADOSG.BIN"), "wb").write(grom)
+    print("variante: %s" % a.mode)
     print("modulo ADSK: %d byte, RAM >%04X->%04X, nuovo FSTLOW >%04X"
           % (size, RAMDST, fstlow - 1, fstlow))
     print("scritti %s/4ADOSC.BIN e %s/4ADOSG.BIN" % (a.out, a.out))
