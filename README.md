@@ -73,6 +73,11 @@ All'avvio 4A DOS ora stampa la versione (come `VER`) e la riga
 "INSERT CHARA1 IN DRIVE 1": con il font in GROM quel ramo non viene più
 eseguito, e al suo posto ora c'è un salto al seguito normale.
 
+## File pronti
+
+La cartella `cart/` contiene `4ADOSC.BIN` e `4ADOSG.BIN` già modificati:
+basta copiarli sulla SD del FinalGROM99.
+
 ## Costruzione
 
 I file originali di 4A DOS non sono nel repository. Servono come input:

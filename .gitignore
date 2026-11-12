@@ -1,4 +1,5 @@
 build/
 *.BIN
 *.bin
+!cart/*.BIN
 __pycache__/
