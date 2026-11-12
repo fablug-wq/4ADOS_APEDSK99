@@ -103,6 +103,11 @@ def main():
     patch(grom, 0x6016, b"\x40\x98",
           bytes([0x40 | ((HOOK_GROM >> 8) & 0x1F), HOOK_GROM & 0xFF]),
           "BR LAUNCH")
+    # nome nel menu del FinalGROM99 (voce programma a >64B0, nome a >64B4)
+    name = b"4ADOS APEDSK99"
+    if any(grom[0x64BB - BASE:0x64D0 - BASE]):
+        sys.exit("errore: area dopo il nome del menu non vuota")
+    patch(grom, 0x64B4, b"\x064A DOS", bytes([len(name)]) + name, "nome menu")
     grom[HOOK_GROM - BASE:HOOK_GROM - BASE + len(hook)] = hook
     grom[BLOB_GROM - BASE:BLOB_GROM - BASE + size] = blob
 

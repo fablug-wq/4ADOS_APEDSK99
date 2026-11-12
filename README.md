@@ -59,6 +59,7 @@ Byte modificati:
 | 4ADOSC.BIN | `>653C` | `0203 608F` (LI R3,>608F) | `0460 2B76` (B @>2B76) |
 | 4ADOSC.BIN | `>779A` | `2B76` | `2D90` (FSTLOW) |
 | 4ADOSG.BIN | `>6016` | `40 98` (BR >6098) | `44 E0` (BR >64E0) |
+| 4ADOSG.BIN | `>64B4` | `06` "4A DOS" | `0E` "4ADOS APEDSK99" (nome nel menu) |
 | 4ADOSG.BIN | `>64E0` | vuoto | routine GPL di copia |
 | 4ADOSG.BIN | `>6500` | vuoto | modulo ADSK |
 
