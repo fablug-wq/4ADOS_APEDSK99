@@ -16,7 +16,7 @@ ACOMND, ASUBCM, RDINT = 0x5FE8, 0x5FE9, 0x5FEA
 BIAS = 0x60
 
 TRAPS = {0x64BA: "MAINLP", 0x6542: "ERRMIS", 0x6520: "ERRPAR",
-         0x6536: "ERRDEV", 0x6546: "ERRTXT", 0x6C1A: "QCMD"}
+         0x6536: "ERRDEV", 0x6546: "ERRTXT"}
 
 
 def biased(text):
@@ -341,13 +341,6 @@ def main():
 
     c, r = run(blob, "LDIR", aa=False)
     check("senza APEDSK99 -> Device Error", r == "ERRDEV" and not c.ard.log, r)
-
-    for aa in (True, False):
-        c, r = run(blob, "EXIT", aa=aa)
-        q = [i for i in range(ORG, ORG + len(blob) - 3)
-             if c.mem[i:i + 4] == b"QUIT"]
-        check("EXIT (APEDSK99 %s) -> segnale QUIT + reset" % ("presente" if aa else "assente"),
-              r == "QCMD" and len(q) == 1 and not c.ard.log, (r, q))
 
     print("\n%d errori" % fails)
     sys.exit(1 if fails else 0)

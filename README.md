@@ -30,7 +30,6 @@ solo i comandi specifici di APEDSK99.
 | `TIME` | `CALL TIME` | data e ora dal server NTP |
 | `ACFG` | `CALL ACFG` | applica la configurazione di rete (ACFG.DSK su DSK1) |
 | `ARST` | `CALL ARST` | mostra la versione e resetta APEDSK99 |
-| `EXIT` | — | torna alla schermata del TI senza far ripartire 4A DOS |
 
 I nomi vanno da 1 a 8 caratteri e si scrivono senza virgolette. 4A DOS li
 converte in maiuscolo. Gli elenchi lunghi rispettano `MORE`, e i messaggi
@@ -47,10 +46,10 @@ vanno anche su `OUTPUT` se è attivo, come quelli degli altri comandi.
   non è nella tabella comandi, 4A DOS salta a `>653C` ("Illegal Command").
   Lì la patch mette un `B @>2B76`. Il modulo cerca la parola fra i comandi
   APEDSK99 e, se non la trova, mostra il solito "Illegal Command".
-- **Dove sta il codice.** Il modulo (574 byte) è nella GROM a `>6510`.
+- **Dove sta il codice.** Il modulo (538 byte) è nella GROM a `>6500`.
   All'avvio la routine GPL a `>64E0`, chiamata dal codice di avvio di
-  JediMatt42 a `>6012`, lo copia in RAM a `>2B76`–`>2DB3`. Il valore
-  iniziale di FSTLOW (`>2028`) passa da `>2B76` a `>2DB4`, così il loader di
+  JediMatt42 a `>6012`, lo copia in RAM a `>2B76`–`>2D8F`. Il valore
+  iniziale di FSTLOW (`>2028`) passa da `>2B76` a `>2D90`, così il loader di
   `LOAD` non lo sovrascrive.
 
 Byte modificati:
@@ -60,20 +59,11 @@ Byte modificati:
 | 4ADOSC.BIN | `>653C` | `0203 608F` (LI R3,>608F) | `0460 2B76` (B @>2B76) |
 | 4ADOSC.BIN | `>63AE` | ramo "INSERT CHARA1" (non più usato) | banner all'avvio |
 | 4ADOSC.BIN | `>6470` | `0460 71A6` (B @AUTO-BAT) | `0460 63B0` (B @banner) |
-| 4ADOSC.BIN | `>779A` | `2B76` | `2DB4` (FSTLOW) |
+| 4ADOSC.BIN | `>779A` | `2B76` | `2D90` (FSTLOW) |
 | 4ADOSG.BIN | `>6016` | `40 98` (BR >6098) | `44 E0` (BR >64E0) |
 | 4ADOSG.BIN | `>64B4` | `06` "4A DOS" | `0E` "4ADOS APEDSK99" (nome nel menu) |
-| 4ADOSG.BIN | `>64E0` | vuoto | routine GPL: controllo EXIT e copia del modulo |
-| 4ADOSG.BIN | `>6510` | vuoto | modulo ADSK |
-
-## EXIT
-
-`Q` resetta la console, ma la GROM fa ripartire subito 4A DOS. `EXIT`
-scrive il segnale `QUIT` in RAM (nel modulo) e poi fa lo stesso reset di
-`Q`. All'avvio la routine GPL trova il segnale, lo cancella e salta
-l'avvio automatico usando lo stesso percorso previsto da Tursi per la
-barra spaziatrice (`>607C`): compare la schermata del TI e dal menu si
-può scegliere un'altra cartuccia o rientrare in 4A DOS.
+| 4ADOSG.BIN | `>64E0` | vuoto | routine GPL di copia |
+| 4ADOSG.BIN | `>6500` | vuoto | modulo ADSK |
 
 ## Banner
 
@@ -114,7 +104,7 @@ TIME.
 - `ACHR` non c'è, perché 4A DOS carica già il proprio set di caratteri.
 - `TIME` mostra data e ora, ma non c'è una variabile `NTP$` da riempire.
 - Il modulo viene copiato in RAM solo all'avvio della cartuccia. Se un
-  programma lanciato da 4A DOS sovrascrive `>2B76`–`>2DB3`, basta riavviare
+  programma lanciato da 4A DOS sovrascrive `>2B76`–`>2D8F`, basta riavviare
   4A DOS dal menu del FinalGROM99.
 - Una parola di 4 lettere sconosciuta passa prima dal modulo, ma il
   risultato non cambia: "Illegal Command".
