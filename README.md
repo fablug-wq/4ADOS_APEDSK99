@@ -47,8 +47,8 @@ vanno anche su `OUTPUT` se è attivo, come quelli degli altri comandi.
   Lì la patch mette un `B @>2B76`. Il modulo cerca la parola fra i comandi
   APEDSK99 e, se non la trova, mostra il solito "Illegal Command".
 - **Dove sta il codice.** Il modulo (538 byte) è nella GROM a `>6500`.
-  All'avvio la routine GPL a `>64E0`, chiamata dal codice di avvio di
-  JediMatt42 a `>6012`, lo copia in RAM a `>2B76`–`>2D8F`. Il valore
+  All'avvio la routine GPL a `>64E0`, chiamata dalla voce del menu, lo
+  copia in RAM a `>2B76`–`>2D8F`. Il valore
   iniziale di FSTLOW (`>2028`) passa da `>2B76` a `>2D90`, così il loader di
   `LOAD` non lo sovrascrive.
 
@@ -60,10 +60,22 @@ Byte modificati:
 | 4ADOSC.BIN | `>63AE` | ramo "INSERT CHARA1" (non più usato) | banner all'avvio |
 | 4ADOSC.BIN | `>6470` | `0460 71A6` (B @AUTO-BAT) | `0460 63B0` (B @banner) |
 | 4ADOSC.BIN | `>779A` | `2B76` | `2D90` (FSTLOW) |
-| 4ADOSG.BIN | `>6016` | `40 98` (BR >6098) | `44 E0` (BR >64E0) |
+| 4ADOSG.BIN | `>6004` | `6090` (lista power-up) | `0000` (nessun avvio automatico) |
+| 4ADOSG.BIN | `>64B2` | `64D0` (EXIT) | `64E0` (avvio dal menu) |
 | 4ADOSG.BIN | `>64B4` | `06` "4A DOS" | `0E` "4ADOS APEDSK99" (nome nel menu) |
-| 4ADOSG.BIN | `>64E0` | vuoto | routine GPL di copia |
+| 4ADOSG.BIN | `>64E0` | vuoto | avvio: indirizzo ROM, copia del modulo, LAUNCH |
 | 4ADOSG.BIN | `>6500` | vuoto | modulo ADSK |
+
+## Avvio e uscita
+
+Nella versione di JediMatt42 4A DOS partiva da una routine di power-up
+a ogni reset, quindi `Q` lo faceva solo ripartire. Ora la lista power-up
+è vuota e 4A DOS parte dalla sua voce nel menu del TI
+("4ADOS APEDSK99"):
+
+- dopo aver scelto la cartuccia nel FinalGROM99 compare la schermata
+  del TI; dal menu si sceglie 4ADOS APEDSK99;
+- `Q` resetta e torna alla schermata del TI.
 
 ## Banner
 

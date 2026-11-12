@@ -108,10 +108,11 @@ def main():
     patch(rom, 0x779A, b"\x2B\x76", fstlow.to_bytes(2, "big"), "FSTLOW")
 
     # --- GROM ---
-    # BR >6098 -> BR >64E0 (routine di copia, che poi salta a >6098)
-    patch(grom, 0x6016, b"\x40\x98",
-          bytes([0x40 | ((HOOK_GROM >> 8) & 0x1F), HOOK_GROM & 0xFF]),
-          "BR LAUNCH")
+    # niente avvio automatico: lista power-up vuota nell'header
+    patch(grom, 0x6004, b"\x60\x90", b"\x00\x00", "lista power-up")
+    # la voce del menu (>64B0) punta all'avvio a >64E0 invece che a EXIT
+    patch(grom, 0x64B2, b"\x64\xD0", HOOK_GROM.to_bytes(2, "big"),
+          "indirizzo voce menu")
     # nome nel menu del FinalGROM99 (voce programma a >64B0, nome a >64B4)
     name = b"4ADOS APEDSK99"
     if any(grom[0x64BB - BASE:0x64D0 - BASE]):
