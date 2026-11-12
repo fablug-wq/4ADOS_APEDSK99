@@ -25,7 +25,7 @@ SHA_GROM = "195ee452ff6b2a6172062b40e24c2b27d39df9592261eba40b8e8f56b2ed9a2f"
 BASE = 0x6000
 RAMDST = 0x2B76          # inizio modulo in RAM (ex FSTLOW)
 HOOK_GROM = 0x64E0       # routine GPL di copia
-BLOB_GROM = 0x6500       # modulo nella GROM
+BLOB_GROM = 0x6510       # modulo nella GROM
 GROM_END = 0x7800        # fine del file GROM da 6K
 
 
@@ -76,7 +76,15 @@ def main():
     blob += b"\x00" * (size - len(blob))
     fstlow = RAMDST + size
 
-    run([sys.executable, xga, "-D", "ADSKSZ=%d" % size,
+    quitf = None
+    for line in open(os.path.join(a.out, "adsk.lst")):
+        f = line.split()
+        if len(f) >= 4 and f[3] == "QUITF":
+            quitf = int(f[1], 16)
+    if quitf is None:
+        sys.exit("errore: simbolo QUITF non trovato in adsk.lst")
+
+    run([sys.executable, xga, "-D", "ADSKSZ=%d" % size, "QUITF=%d" % quitf,
          "-L", os.path.join(a.out, "gromhook.lst"), "-o", hook_f,
          os.path.join(ROOT, "src", "gromhook.gpl")], a.xdt99)
     hook = open(hook_f, "rb").read()

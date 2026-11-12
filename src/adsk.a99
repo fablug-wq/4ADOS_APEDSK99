@@ -13,6 +13,7 @@
 *   MDSK n NOME   NDSK n NOME
 *   RDSK NOME  FGET NOME  FPUT NOME  ADSR NOME  CDIR NOME
 *   SMAP  LDIR  AHLP  TIME  ACFG  ARST
+*   EXIT  (torna alla schermata del TI senza riavviare 4A DOS)
 ********************************************************************
 
 * --- registri APEDSK99 (DSR v12s) ---------------------------------
@@ -35,6 +36,7 @@ ERRDEV EQU  >6536              "Device Error"
 ERRTXT EQU  >6546              stampa errore in R3 e chiude la riga
 MSGCMD EQU  >608F              testo "Illegal Command"
 HONK   EQU  >6E2E              BL: suono di errore
+QCMD   EQU  >6C1A              comando Q: ripristina VDP e BLWP @>0000
 
 * Registri: PRINT altera R0-R4, R7, R9, R11; R6 (cursore) e' di 4A DOS.
 * Qui si usano R8 = codice comando, R10 = tipo; R5 e R6 non si toccano.
@@ -48,6 +50,7 @@ TDNAM  EQU  4                  numero DSK + nome
 TNAME  EQU  5                  solo nome
 TRST   EQU  6                  ARST (sottocomando >68)
 TTIME  EQU  7                  TIME: mostra sempre il buffer
+TEXIT  EQU  8                  EXIT: non usa APEDSK99
 
        AORG >2B76
 
@@ -76,7 +79,15 @@ NOTOUR LI   R3,MSGCMD          non e' nostro: errore standard di 4A DOS
        B    @ERRTXT
 
 * --- comando riconosciuto --------------------------------------------
-FOUND  CB   @>4000,@BAA        DSR APEDSK99 presente?
+FOUND  CI   R10,TEXIT
+       JNE  FND0
+* EXIT: segnale in RAM letto dalla GROM al riavvio, poi reset come Q
+       LI   R0,>5155           'QU'
+       MOV  R0,@QUITF
+       LI   R0,>4954           'IT'
+       MOV  R0,@QUITF+2
+       B    @QCMD
+FND0   CB   @>4000,@BAA        DSR APEDSK99 presente?
        JEQ  FND1
        B    @ERRDEV
 FND1   CLR  R0
@@ -223,6 +234,8 @@ CMDTBL TEXT 'PDSK'
        BYTE >35,TTIME
        TEXT 'ACFG'
        BYTE >36,TNONE
+       TEXT 'EXIT'
+       BYTE >00,TEXIT
        BYTE 0
 
 B1     BYTE 1
@@ -235,6 +248,7 @@ BSPC   BYTE ' '
 SUBCM  BYTE 0
        EVEN
 SAVR11 DATA 0
+QUITF  DATA 0,0                segnale EXIT (>5155,>4954), letto dalla GROM
 LINE   BSS  33
        EVEN
 ADSKE

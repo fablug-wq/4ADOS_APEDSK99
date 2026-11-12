@@ -1,21 +1,35 @@
 ********************************************************************
-* Aggancio GROM: copia il modulo ADSK in RAM prima di avviare 4A DOS.
+* Aggancio GROM all'avvio di 4A DOS.
 *
 * Il codice di avvio di JediMatt42 a >6012 fa:
 *     DST  >62E0,@>8300      (indirizzo di partenza della ROM)
 *     BR   >6098             (LAUNCH di Tursi)
 * La patch cambia il BR in BR >64E0, dove si trova questa routine.
 *
-* ADSKSZ (dimensione del modulo) viene passato dallo script di build.
+* 1. Se il comando EXIT ha lasciato il segnale "QUIT" in RAM, lo
+*    cancella e salta l'avvio automatico (stesso percorso della barra
+*    spaziatrice di Tursi, a >607C): compare la schermata del TI.
+* 2. Altrimenti copia il modulo ADSK in RAM e avvia 4A DOS.
+*
+* ADSKSZ (dimensione del modulo) e QUITF (indirizzo del segnale)
+* vengono passati dallo script di build.
 ********************************************************************
 LAUNCH EQU  >6098
-BLOB   EQU  >6500              modulo ADSK nella GROM
+SKIP   EQU  >607C              uscita senza avvio automatico
+BLOB   EQU  >6510              modulo ADSK nella GROM
 RAMDST EQU  >2B76              destinazione in RAM (ex FSTLOW di 4A DOS)
 
        GROM >6000
        AORG >04E0
 
-LDADSK MOVE ADSKSZ,G@BLOB,@RAMDST
+LDADSK DCEQ >5155,@QUITF
+       BR   GO
+       DCEQ >4954,@QUITF+2
+       BR   GO
+       DCLR @QUITF
+       B    SKIP
+
+GO     MOVE ADSKSZ,G@BLOB,@RAMDST
        B    LAUNCH
 
        END
