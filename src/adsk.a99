@@ -1,0 +1,241 @@
+********************************************************************
+* ADSK - comandi APEDSK99 per 4A DOS (versione FinalGROM99)
+*
+* Il blocco viene copiato dalla GROM in RAM (>2B76) all'avvio e
+* agganciato al punto "Illegal Command" di 4A DOS (>653C): quando una
+* parola non e' nella tabella comandi di 4A DOS, si cerca qui.
+*
+* Parla direttamente con i registri memory-mapped di APEDSK99
+* (DSR v12s), senza passare dal TI BASIC.
+*
+* Sintassi (anche nei file BATCH):
+*   PDSK n   UDSK n   LDSK [n]
+*   MDSK n NOME   NDSK n NOME
+*   RDSK NOME  FGET NOME  FPUT NOME  ADSR NOME  CDIR NOME
+*   SMAP  LDIR  AHLP  TIME  ACFG  ARST
+********************************************************************
+
+* --- registri APEDSK99 (DSR v12s) ---------------------------------
+CALLST EQU  >5FC6              stato: 0-8 errore, 9 info, >F0 fine, >FF ok
+LSTDRV EQU  >5FC7              ultimo DSK usato (LDSK senza parametro)
+CALLBF EQU  >5FC8              buffer 32 byte da/per l'Arduino
+ACOMND EQU  >5FE8              registro comando
+ASUBCM EQU  >5FE9              registro sottocomando
+RDINT  EQU  >5FEA              INC = riga successiva
+
+* --- punti di aggancio in 4A DOS (ROM 4ADOSC.BIN) -------------------
+PARSE  EQU  >6298              vettore BLWP: parola successiva -> ARGLEN
+ARGLEN EQU  >2800              lunghezza parola (byte)
+ARGTXT EQU  >2801              testo parola (gia' in maiuscolo)
+PRINT  EQU  >655A              BL: stampa stringa con lunghezza in R3
+MAINLP EQU  >64BA              ritorno al ciclo comandi
+ERRMIS EQU  >6542              "Missing Parameter"
+ERRPAR EQU  >6520              "Illegal Parameter"
+ERRDEV EQU  >6536              "Device Error"
+ERRTXT EQU  >6546              stampa errore in R3 e chiude la riga
+MSGCMD EQU  >608F              testo "Illegal Command"
+HONK   EQU  >6E2E              BL: suono di errore
+
+* Registri: PRINT altera R0-R4, R7, R9, R11; R6 (cursore) e' di 4A DOS.
+* Qui si usano R8 = codice comando, R10 = tipo; R5 e R6 non si toccano.
+
+* tipi di comando
+TNONE  EQU  0                  nessun parametro, mostra solo lo stato
+TLIST  EQU  1                  nessun parametro, elenco su piu' righe
+TDRV   EQU  2                  numero DSK obbligatorio
+TLDSK  EQU  3                  numero DSK facoltativo, elenco
+TDNAM  EQU  4                  numero DSK + nome
+TNAME  EQU  5                  solo nome
+TRST   EQU  6                  ARST (sottocomando >68)
+TTIME  EQU  7                  TIME: mostra sempre il buffer
+
+       AORG >2B76
+
+ADSKX  CB   @ARGLEN,@B4        tutti i comandi APEDSK99 hanno 4 lettere
+       JNE  NOTOUR
+       LI   R1,CMDTBL
+LOOK   MOVB *R1,R0             fine tabella?
+       JEQ  NOTOUR
+       MOV  R1,R3
+       LI   R2,ARGTXT
+       LI   R4,4
+LOOK2  CB   *R3+,*R2+
+       JNE  NEXT
+       DEC  R4
+       JNE  LOOK2
+       CLR  R8
+       MOVB *R3+,R8            codice comando (MSB)
+       CLR  R10
+       MOVB *R3,R10
+       SWPB R10                tipo (word)
+       JMP  FOUND
+NEXT   AI   R1,6
+       JMP  LOOK
+
+NOTOUR LI   R3,MSGCMD          non e' nostro: errore standard di 4A DOS
+       B    @ERRTXT
+
+* --- comando riconosciuto --------------------------------------------
+FOUND  CB   @>4000,@BAA        DSR APEDSK99 presente?
+       JEQ  FND1
+       B    @ERRDEV
+FND1   CLR  R0
+       CI   R10,TRST
+       JNE  FND2
+       LI   R0,>6800           ARST: sottocomando reset
+FND2   MOVB R0,@SUBCM
+
+       CI   R10,TDRV
+       JL   DOCMD              TNONE, TLIST
+       CI   R10,TDNAM
+       JH   NAMEQ              TNAME, TRST, TTIME
+* numero DSK (TDRV, TLDSK, TDNAM)
+       BLWP @PARSE
+       CLR  R0
+       MOVB @ARGLEN,R0
+       JNE  GD1
+       CI   R10,TLDSK          LDSK senza numero: ultimo DSK usato
+       JNE  MISS
+       MOVB @LSTDRV,@CALLBF
+       JMP  DOCMD
+GD1    CB   R0,@B1
+       JNE  BADPAR
+       CLR  R0
+       MOVB @ARGTXT,R0
+       AI   R0,->3100          '1'..'3' -> 0..2
+       CI   R0,>0200
+       JH   BADPAR             (confronto senza segno: scarta anche '0')
+       AI   R0,>0100
+       MOVB R0,@CALLBF
+       MOVB R0,@LSTDRV
+       CI   R10,TDNAM
+       JNE  DOCMD
+       JMP  GETNAM
+NAMEQ  CI   R10,TNAME
+       JNE  DOCMD
+* nome DOAD / cartella / DSR (1-8 caratteri)
+GETNAM BLWP @PARSE
+       CLR  R0
+       MOVB @ARGLEN,R0
+       JEQ  MISS
+       SWPB R0
+       CI   R0,8
+       JH   BADPAR
+       LI   R1,ARGTXT
+       LI   R2,CALLBF+2
+GN1    MOVB *R1+,*R2+
+       DEC  R0
+       JNE  GN1
+       MOVB R0,*R2             terminatore >00
+
+* --- esecuzione --------------------------------------------------------
+DOCMD  MOVB @SUBCM,@ASUBCM
+       MOVB R8,@ACOMND         l'Arduino ferma il TI ed esegue
+       CI   R10,TTIME
+       JNE  DOC1
+       CB   @CALLST,@BF0
+       JL   STATUS             errore NTP: mostra il messaggio
+       BL   @SHOWBF            data/ora
+       JMP  SUBC
+DOC1   CI   R10,TLIST
+       JEQ  LIST
+       CI   R10,TLDSK
+       JNE  STATUS
+LIST   MOVB @CALLST,R0         0 = nessun DOAD montato
+       JEQ  STATUS
+LIST1  CB   @CALLST,@BF0       >F0 = fine elenco
+       JEQ  STATUS
+       BL   @SHOWBF
+       INC  @RDINT             chiede la riga successiva
+       JMP  LIST1
+
+STATUS CB   @CALLST,@BF0
+       JHE  SUBC               >F0 / >FF: tutto bene, nessun messaggio
+       BL   @SHOWBF            messaggio di errore o informativo
+       CB   @CALLST,@B9
+       JHE  SUBC               9 = solo informativo
+       BL   @HONK
+SUBC   MOVB @SUBCM,R0
+       JEQ  DONE
+       MOVB R0,@ACOMND         sottocomando (ARST)
+DONE   B    @MAINLP
+
+MISS   B    @ERRMIS
+BADPAR B    @ERRPAR
+
+* --- stampa i 32 byte di CALLBF togliendo il bias del TI BASIC --------
+SHOWBF MOV  R11,@SAVR11
+       LI   R1,CALLBF
+       LI   R2,LINE+1
+       LI   R4,32
+SB1    MOVB *R1+,R0
+       CB   R0,@B80
+       JL   SB2                gia' ASCII
+       AI   R0,->6000          toglie il bias >60
+SB2    MOVB R0,*R2+
+       DEC  R4
+       JNE  SB1
+       LI   R4,32              taglia gli spazi finali (minimo 1 carattere)
+SB3    DEC  R2
+       CB   *R2,@BSPC
+       JNE  SB4
+       DEC  R4
+       CI   R4,1
+       JH   SB3
+SB4    SWPB R4
+       MOVB R4,@LINE
+       LI   R3,LINE
+       BL   @PRINT             gestisce scroll, MORE e OUTPUT
+       MOV  @SAVR11,R11
+       RT
+
+* --- dati ---------------------------------------------------------------
+* nome (4), codice comando, tipo
+CMDTBL TEXT 'PDSK'
+       BYTE >01,TDRV
+       TEXT 'UDSK'
+       BYTE >02,TDRV
+       TEXT 'LDSK'
+       BYTE >03,TLDSK
+       TEXT 'MDSK'
+       BYTE >10,TDNAM
+       TEXT 'NDSK'
+       BYTE >11,TDNAM
+       TEXT 'RDSK'
+       BYTE >20,TNAME
+       TEXT 'FGET'
+       BYTE >21,TNAME
+       TEXT 'FPUT'
+       BYTE >22,TNAME
+       TEXT 'ADSR'
+       BYTE >23,TNAME
+       TEXT 'CDIR'
+       BYTE >24,TNAME
+       TEXT 'SMAP'
+       BYTE >30,TLIST
+       TEXT 'LDIR'
+       BYTE >31,TLIST
+       TEXT 'AHLP'
+       BYTE >32,TLIST
+       TEXT 'ARST'
+       BYTE >34,TRST
+       TEXT 'TIME'
+       BYTE >35,TTIME
+       TEXT 'ACFG'
+       BYTE >36,TNONE
+       BYTE 0
+
+B1     BYTE 1
+B4     BYTE 4
+B9     BYTE 9
+B80    BYTE >80
+BAA    BYTE >AA
+BF0    BYTE >F0
+BSPC   BYTE ' '
+SUBCM  BYTE 0
+       EVEN
+SAVR11 DATA 0
+LINE   BSS  33
+       EVEN
+ADSKE
+       END
